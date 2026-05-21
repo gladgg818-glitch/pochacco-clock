@@ -333,26 +333,20 @@ body {
   padding: 10px 14px;
   border: 1.5px solid #d0d8e0;
   border-radius: 18px;
-  font-size: 14px;
+  font-size: 16px;
   font-family: inherit;
   outline: none;
   transition: border-color 0.2s;
-  min-height: 38px;
-  max-height: 80px;
-  overflow-y: auto;
-  word-break: break-all;
-  -webkit-user-select: text;
-  user-select: text;
+  resize: none;
+  height: 38px;
+  line-height: 18px;
+  background: #fff;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 #chat-input:focus {
   border-color: #5B7DB1;
-}
-
-#chat-input:empty::before {
-  content: attr(data-placeholder);
-  color: #aab;
-  pointer-events: none;
 }
 
 #chat-send {
@@ -445,7 +439,7 @@ body {
 <!-- Chat input bar -->
 <div id="chat-bar">
   <button id="chat-close">✕</button>
-  <div id="chat-input" contenteditable="true" role="textbox" data-placeholder="我是小帕，你是谁呀？"></div>
+  <textarea id="chat-input" rows="1" placeholder="我是小帕，你是谁呀？" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="send"></textarea>
   <button id="chat-send">
     <svg viewBox="0 0 24 24" fill="none">
       <path d="M22 2L11 13" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
@@ -938,9 +932,10 @@ chatClose.addEventListener('click', () => {
 });
 
 function handleSend() {
-  const text = chatInput.textContent.trim();
+  const text = chatInput.value.trim();
   if (!text || chatSend.classList.contains('processing')) return;
-  chatInput.textContent = '';
+  chatInput.value = '';
+  chatInput.blur();
   sendToDeepSeek(text);
 }
 
