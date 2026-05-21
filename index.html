@@ -2,7 +2,10 @@
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
 <title>小帕时钟</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
@@ -309,14 +312,16 @@ body {
   bottom: 0;
   left: 0;
   right: 0;
-  background: #fff;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border-top: 1px solid #e0e8f0;
   padding: 12px 16px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
   display: none;
   align-items: center;
   gap: 10px;
   z-index: 200;
-  box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
 }
 
 #chat-bar.open {
@@ -428,7 +433,7 @@ body {
 <!-- Chat input bar -->
 <div id="chat-bar">
   <button id="chat-close">✕</button>
-  <input id="chat-input" type="text" placeholder="输入想对小帕说的话..." autocomplete="off">
+  <input id="chat-input" type="text" placeholder="输入想对小帕说的话..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="send">
   <button id="chat-send">
     <svg viewBox="0 0 24 24" fill="none">
       <path d="M22 2L11 13" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
