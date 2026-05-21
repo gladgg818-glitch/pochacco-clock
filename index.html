@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>小帕时钟</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #E8F4FD;
+  min-height: 100vh;
+  font-family: 'JetBrains Mono', monospace;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+#header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(232,244,253,0.08);
+  backdrop-filter: blur(6px);
+  z-index: 10;
+}
+
+#title {
+  color: #2c3e50;
+  font-family: 'Playfair Display', serif;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  line-height: 1;
+}
+
+#clock {
+  position: fixed;
+  top: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(92vw, 820px);
+  min-height: 180px;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 8;
+  filter: drop-shadow(0 6px 28px rgba(100, 150, 200, 0.10));
+}
+
+#clock-text {
+  display: flex;
+  align-items: flex-start;
+  gap: clamp(8px, 1.6vw, 24px);
+  transform: translateX(-4px);
+}
+
+.clock-digit {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(12, 1fr);
+  gap: clamp(3px, 0.45vw, 6px);
+  width: clamp(56px, 9.2vw, 116px);
+  height: clamp(230px, 37vw, 470px);
+}
+
+.clock-colon {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: repeat(12, 1fr);
+  gap: clamp(3px, 0.45vw, 6px);
+  width: clamp(14px, 2.4vw, 30px);
+  height: clamp(230px, 37vw, 470px);
+}
+
+.clock-digit span,
+.clock-colon span {
+  background: transparent;
+  transition: background 0.22s ease;
+}
+
+.clock-digit span.on,
+.clock-colon span.on {
+  background: #ffffff;
+}
+
+#stage {
+  position: fixed;
+  inset: 72px 0 0 0;
+  overflow: visible;
+  z-index: 9;
+}
+
+#pochacco-wrap {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: none;
+  padding: 110px 70px 110px;
+  transition: transform 0.34s cubic-bezier(0.2, 0.72, 0.18, 1);
+  will-change: transform;
+  z-index: 20;
+}
+
+#pochacco-wrap.dragging {
+  cursor: grabbing;
+  transition: none;
+}
+
+#pochacco-wrap.dropping {
+  cursor: grab;
+  transition: none;
+}
+
+#bubble {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  min-width: 110px;
+  max-width: min(75vw, 260px);
+  transform: translateX(-50%) translateY(8px) scale(0.88);
+  opacity: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+#bubble-shape {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+#bubble-shape path {
+  fill: #fff;
+  stroke: none;
+}
+
+#bubble-label {
+  position: relative;
+}
+
+#bubble-os {
+  color: #5B7DB1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 18px 26px;
+  font-size: clamp(13px, 1.2vw, 14px);
+  font-weight: 700;
+  line-height: 1.45;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+  word-break: break-word;
+}
+
+#header, #title, #clock, #clock-text, #bubble, #bubble-label, #bubble-os, #pochacco {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+#bubble.show {
+  animation: bubble-pop 4s ease forwards;
+}
+
+#bubble.ai-reply {
+  animation: bubble-pop-long 8s ease forwards;
+}
+
+#bubble.flip.show, #bubble.flip.ai-reply {
+  animation: bubble-pop-right 4s ease forwards;
+}
+
+@keyframes bubble-pop {
+  0% { opacity: 0; transform: translateX(-50%) translateY(12px) scale(0.82); }
+  10% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  85% { opacity: 1; transform: translateX(-50%) translateY(-4px) scale(1); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(1.04); }
+}
+
+@keyframes bubble-pop-long {
+  0% { opacity: 0; transform: translateX(-50%) translateY(12px) scale(0.82); }
+  6% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  90% { opacity: 1; transform: translateX(-50%) translateY(-4px) scale(1); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(1.04); }
+}
+
+@keyframes bubble-pop-right {
+  0% { opacity: 0; transform: translateY(12px) scale(0.82); }
+  10% { opacity: 1; transform: translateY(0) scale(1); }
+  85% { opacity: 1; transform: translateY(-4px) scale(1); }
+  100% { opacity: 0; transform: translateY(-10px) scale(1.04); }
+}
+
+#glow {
+  position: absolute;
+  width: min(80vw, 240px);
+  height: 36px;
+  background: radial-gradient(ellipse at center, rgba(91,125,177,0.10) 0%, rgba(91,125,177,0.05) 40%, transparent 100%);
+  top: 310px;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 0;
+  transition: opacity 0.14s ease, transform 0.24s ease;
+}
+
+#pochacco-wrap.dragging #glow,
+#pochacco-wrap.dropping #glow {
+  opacity: 0;
+  transform: translateX(-50%) scale(0.82);
+}
+
+#pochacco {
+  position: relative;
+  z-index: 1;
+  animation: float 3.4s ease-in-out infinite;
+  display: block;
+}
+
+#pochacco-wrap.dragging #pochacco {
+  animation-play-state: paused;
+}
+
+#pochacco.squash {
+  animation: squash-land 300ms cubic-bezier(0.2, 0.82, 0.2, 1);
+}
+
+@keyframes float {
+  0%,100% { transform: translateY(0); }
+  50%     { transform: translateY(-6px); }
+}
+
+@keyframes squash-land {
+  0%   { transform: scaleX(1) scaleY(1); }
+  26%  { transform: scaleX(1.18) scaleY(0.72); }
+  62%  { transform: scaleX(0.94) scaleY(1.06); }
+  100% { transform: scaleX(1) scaleY(1); }
+}
+
+/* Dragging wiggle animation */
+#pochacco-wrap.dragging #pochacco {
+  animation: wiggle 0.3s ease-in-out infinite !important;
+}
+
+@keyframes wiggle {
+  0%,100% { transform: rotate(-3deg); }
+  50%     { transform: rotate(3deg); }
+}
+
+/* Floating emoji */
+.note {
+  position: fixed;
+  pointer-events: none;
+  user-select: none;
+  line-height: 1;
+  animation: drift linear forwards;
+}
+@keyframes drift {
+  0%   { opacity: 0;   transform: translateY(0) rotate(0deg) scale(0.7); }
+  12%  { opacity: 0.8; }
+  80%  { opacity: 0.5; }
+  100% { opacity: 0;   transform: translateY(-240px) rotate(18deg) scale(1.1); }
+}
+
+/* Mic button */
+#mic-btn {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 56px;
+  height: 56px;
+  border: 3px solid #5B7DB1;
+  background: #fff;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 16px rgba(91,125,177,0.15);
+}
+
+#mic-btn:hover {
+  background: #f0f7ff;
+  transform: translateX(-50%) scale(1.08);
+}
+
+#mic-btn.recording {
+  background: #FFE4E4;
+  border-color: #E85D5D;
+  animation: pulse-mic 1.2s ease-in-out infinite;
+}
+
+#mic-btn.processing {
+  background: #FFF8E1;
+  border-color: #F5A623;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+@keyframes pulse-mic {
+  0%,100% { box-shadow: 0 0 0 0 rgba(232,93,93,0.3); }
+  50%     { box-shadow: 0 0 0 12px rgba(232,93,93,0); }
+}
+
+#mic-btn svg { width: 24px; height: 24px; }
+
+#mic-status {
+  position: fixed;
+  bottom: 96px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: #8899aa;
+  z-index: 100;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+#mic-status.visible { opacity: 1; }
+
+@media (max-width: 640px) {
+  #header { height: 76px; }
+  #title { font-size: 18px; letter-spacing: 0.14em; }
+  #stage { inset: 76px 0 0 0; }
+  #clock { top: 88px; width: 96vw; min-height: 280px; }
+  #clock-text { gap: clamp(6px, 1.6vw, 12px); }
+  .clock-digit { gap: 3px; width: clamp(60px, 15.5vw, 82px); height: clamp(248px, 64vw, 340px); }
+  .clock-colon { gap: 3px; width: clamp(16px, 4.2vw, 22px); height: clamp(248px, 64vw, 340px); }
+  #glow { top: 190px; width: min(70vw, 180px); }
+  #pochacco-wrap { padding: 60px 36px 60px; }
+  #bubble { top: -10px; max-width: min(82vw, 220px); }
+  #bubble-os { font-size: 13px; line-height: 1.4; padding: 10px 16px 22px; }
+  #mic-btn { width: 48px; height: 48px; bottom: 24px; }
+  #mic-btn svg { width: 20px; height: 20px; }
+  #mic-status { bottom: 80px; }
+}
+</style>
+</head>
+<body>
+
+<header id="header">
+  <h1 id="title">POCHACCO CLOCK</h1>
+</header>
+
+<div id="clock">
+  <div id="clock-text"></div>
+</div>
+
+<div id="stage">
+  <div id="pochacco-wrap">
+    <div id="bubble">
+      <svg id="bubble-shape" viewBox="0 0 328 164" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M23 23V0H305.5V23H328V113.5H305.5V138.5H77.5L48 164V138.5H23V113.5H0V23H23Z"/>
+      </svg>
+      <div id="bubble-label">
+        <p id="bubble-os"></p>
+      </div>
+    </div>
+    <div id="glow"></div>
+
+    <canvas id="pochacco" width="288" height="324" style="image-rendering:pixelated;"></canvas>
+  </div>
+</div>
+
+<!-- Mic button -->
+<button id="mic-btn" title="点击说话">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" fill="#5B7DB1" stroke="#5B7DB1"/>
+    <path d="M19 10v2a7 7 0 0 1-14 0v-2" stroke="#5B7DB1"/>
+    <line x1="12" y1="19" x2="12" y2="23" stroke="#5B7DB1"/>
+    <line x1="8" y1="23" x2="16" y2="23" stroke="#5B7DB1"/>
+  </svg>
+</button>
+<div id="mic-status"></div>
+
+<script>
+// ===== CONFIG =====
+const DEEPSEEK_API_KEY = 'sk-d384052add6c4f6e89107053e4fab918';
+const DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions';
+
+// ===== PIXEL ART DEFINITION =====
+const PIXEL = 9; // each grid cell = 9x9 canvas pixels
+const pochaccoGrid = [
+  '................................',
+  '................................',
+  '................................',
+  '.........................##.....',
+  '........................####....',
+  '........................####....',
+  '........................####....',
+  '........................####....',
+  '..............#..#...#.####.....',
+  '...............#WW#W#..###......',
+  '.............#WWWWWWW###........',
+  '...........##WWWWWWWWWWW#.......',
+  '........#####WWWWWWWWWWWW#......',
+  '.....#######WWWWWWWWWWWWWW#.....',
+  '....########WWWWWWWWWWWWWW##....',
+  '....#######WWWWWWWWWWWWWWWW#....',
+  '....#####.#WWWWWWWWWWWW#WWWW#...',
+  '.....###..#WWWWWW#WWWWW#PPWW#...',
+  '...........#WWWPP#WWWWWWPPPWW#..',
+  '...........#WWPPPWWW##WWWWWWW#..',
+  '............#WWWWWWWWWWWWWWW#...',
+  '..........###W######WWWWWWW#....',
+  '..........#WW#BBBBBB#######.....',
+  '..........#WW#####BBBB#BB#......',
+  '.........##WW#WWWW#BBBB#BB#.....',
+  '........#W#WWWWWWWW#BBB#BB##....',
+  '........#WWWWWWWWWWW#BB#B#BB#...',
+  '.......#WWWWWWWWWWWWW##BB#BB#...',
+  '.......#WWWWWWWWWWWWWW###.##....',
+  '........#WWW#WWW#WWWWW#.........',
+  '........#WWWW#W#WWWWWW#.........',
+  '........#WWWWW#WWWWWWW#.........',
+  '.........#####.#######..........',
+  '................................',
+  '................................',
+  '................................'
+];
+
+const colorMap = {
+  '#': '#1a1a1a',
+  'W': '#ffffff',
+  'P': '#FFB5C5',
+  'B': '#7B8EC8',
+  'b': '#5B6BA8',
+};
+
+function drawCharacter() {
+  const canvas = document.getElementById('pochacco');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  for (let y = 0; y < pochaccoGrid.length; y++) {
+    for (let x = 0; x < pochaccoGrid[y].length; x++) {
+      const ch = pochaccoGrid[y][x];
+      if (ch === '.') continue;
+      const color = colorMap[ch];
+      if (!color) continue;
+      ctx.fillStyle = color;
+      ctx.fillRect(x * PIXEL, y * PIXEL, PIXEL, PIXEL);
+    }
+  }
+}
+
+drawCharacter();
+
+// ===== ANIMATION SYSTEM =====
+let currentAnim = null;
+let animTimerId = null;
+
+const ANIMS = ['ear-shake', 'butt-wiggle', 'blink'];
+
+// --- 动画区域定义（修改这里控制动画影响哪些像素）---
+const REGIONS = {
+  // 右耳（上方竖起的耳朵）
+  earRight: (x, y) => y <= 9 && x >= 20,
+  // 左耳（左侧下垂的耳朵）
+  earLeft: (x, y) => y >= 12 && y <= 17 && x <= 10,
+  // 屁股/身体下半部分
+  butt: (x, y) => y >= 28,
+  // 眼睛（行16-17中被W包围的#像素）
+  eye: (x, y, ch) => {
+    if (y < 16 || y > 17 || ch !== '#') return false;
+    const row = pochaccoGrid[y];
+    const left = x > 0 ? row[x-1] : '.';
+    const right = x < row.length-1 ? row[x+1] : '.';
+    return left === 'W' && right === 'W';
+  }
+};
+
+// --- 动画参数（修改这里控制速度和幅度）---
+const ANIM_CONFIG = {
+  'ear-shake': { frames: 6, interval: 70, dx: 1 },
+  'butt-wiggle': { frames: 6, interval: 80, dx: 1 },
+  'blink': { duration: 280 }
+};
+
+function drawWithOffset(offsetMap) {
+  const canvas = document.getElementById('pochacco');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  for (let y = 0; y < pochaccoGrid.length; y++) {
+    for (let x = 0; x < pochaccoGrid[y].length; x++) {
+      const ch = pochaccoGrid[y][x];
+      if (ch === '.') continue;
+      const color = colorMap[ch];
+      if (!color) continue;
+      const offset = offsetMap(x, y, ch);
+      if (offset === null) continue;
+      ctx.fillStyle = color;
+      ctx.fillRect((x + offset.dx) * PIXEL, (y + offset.dy) * PIXEL, PIXEL, PIXEL);
+    }
+  }
+}
+
+function playRandomAnim() {
+  if (currentAnim) return;
+  currentAnim = ANIMS[Math.floor(Math.random() * ANIMS.length)];
+
+  if (currentAnim === 'blink') {
+    drawWithOffset((x, y, ch) => {
+      if (REGIONS.eye(x, y, ch)) return null;
+      return {dx: 0, dy: 0};
+    });
+    animTimerId = setTimeout(() => {
+      drawCharacter();
+      currentAnim = null;
+    }, ANIM_CONFIG.blink.duration);
+
+  } else if (currentAnim === 'ear-shake') {
+    const cfg = ANIM_CONFIG['ear-shake'];
+    let count = 0;
+    function shakeFrame() {
+      const dir = count % 2 === 0 ? cfg.dx : -cfg.dx;
+      drawWithOffset((x, y, ch) => {
+        if (REGIONS.earRight(x, y) || REGIONS.earLeft(x, y)) {
+          return {dx: dir, dy: 0};
+        }
+        return {dx: 0, dy: 0};
+      });
+      count++;
+      if (count < cfg.frames) {
+        animTimerId = setTimeout(shakeFrame, cfg.interval);
+      } else {
+        drawCharacter();
+        currentAnim = null;
+      }
+    }
+    shakeFrame();
+
+  } else if (currentAnim === 'butt-wiggle') {
+    const cfg = ANIM_CONFIG['butt-wiggle'];
+    let count = 0;
+    function wiggleFrame() {
+      const dir = count % 2 === 0 ? cfg.dx : -cfg.dx;
+      drawWithOffset((x, y, ch) => {
+        if (REGIONS.butt(x, y)) return {dx: dir, dy: 0};
+        return {dx: 0, dy: 0};
+      });
+      count++;
+      if (count < cfg.frames) {
+        animTimerId = setTimeout(wiggleFrame, cfg.interval);
+      } else {
+        drawCharacter();
+        currentAnim = null;
+      }
+    }
+    wiggleFrame();
+  }
+}
+
+// ===== REFS =====
+const stage = document.getElementById('stage');
+const wrap = document.getElementById('pochacco-wrap');
+const svg = document.getElementById('pochacco');
+const bubble = document.getElementById('bubble');
+const bubbleOs = document.getElementById('bubble-os');
+const clockText = document.getElementById('clock-text');
+const micBtn = document.getElementById('mic-btn');
+const micStatus = document.getElementById('mic-status');
+
+// ===== CLOCK =====
+const DIGITS = {
+  '0': ['111','101','101','101','101','101','101','101','101','101','101','111'],
+  '1': ['010','110','010','010','010','010','010','010','010','010','010','111'],
+  '2': ['111','001','001','001','001','111','100','100','100','100','100','111'],
+  '3': ['111','001','001','001','001','111','001','001','001','001','001','111'],
+  '4': ['101','101','101','101','101','111','001','001','001','001','001','001'],
+  '5': ['111','100','100','100','100','111','001','001','001','001','001','111'],
+  '6': ['111','100','100','100','100','111','101','101','101','101','101','111'],
+  '7': ['111','001','001','001','001','001','001','001','001','001','001','001'],
+  '8': ['111','101','101','101','101','111','101','101','101','101','101','111'],
+  '9': ['111','101','101','101','101','111','001','001','001','001','001','111'],
+  ':': ['0','0','0','1','0','0','0','0','1','0','0','0']
+};
+
+// ===== DIALOGUE =====
+const osPool = [
+  '汪！今天也要元气满满哦～',
+  '要不要一起去散步？',
+  '我最喜欢运动了！',
+  '蓝色贝雷帽是我的标志～',
+  '有点困了...但还想陪你玩！',
+  '试试长按拖拽我！',
+  '今天天气真好，适合出去玩～',
+  '饿了...想吃骨头饼干...',
+  '你知道吗？我跑步很快的！',
+  '要一起听音乐吗？',
+  '偷偷告诉你，我有点怕打雷...',
+  '尾巴摇摇～心情好好～',
+  '周末想去公园玩！',
+  '我可是很擅长接飞盘的哦！',
+  '今天也想做最棒的运动员！',
+];
+
+// ===== PHYSICS =====
+let baseX = 0, baseY = 0, autoOffsetX = 0;
+let walkPhase = Math.random() * Math.PI * 2;
+let walkSpeed = 0.0028 + Math.random() * 0.0012;
+let walkAmplitude = 46 + Math.random() * 34;
+let dragging = false, dropping = false;
+let dragOffsetX = 0, dragOffsetY = 0;
+let longPressTimer = null;
+let touchStartX = 0, touchStartY = 0;
+let tapDownX = 0, tapDownY = 0, tapDownTime = 0;
+let bubbleFlip = false, osIndex = -1;
+let bubbleTimeoutId = null;
+let dropRafId = 0, squashTimeoutId = null;
+let dropBounceCount = 0, dropVelocityY = 0, dropGroundY = 0, lastDropTime = 0;
+
+const DROP_GRAVITY = 3600;
+const DROP_BOUNCE_FACTOR = 0.3;
+const DROP_MIN_BOUNCE_SPEED = 85;
+
+function getBounds() {
+  return {
+    width: wrap.offsetWidth,
+    height: wrap.offsetHeight,
+    maxX: Math.max(0, stage.clientWidth - wrap.offsetWidth),
+    maxY: Math.max(0, stage.clientHeight - wrap.offsetHeight)
+  };
+}
+
+function clampPosition(x, y) {
+  const bounds = getBounds();
+  return { x: Math.min(bounds.maxX, Math.max(0, x)), y: Math.min(bounds.maxY, Math.max(18, y)) };
+}
+
+function placeBubble() {
+  const margin = 24;
+  const wrapRect = wrap.getBoundingClientRect();
+  const stageRect = stage.getBoundingClientRect();
+  const bubbleWidth = bubble.offsetWidth;
+  const centerWithinStage = wrapRect.left - stageRect.left + wrapRect.width / 2;
+  const shouldFlip = centerWithinStage > stage.clientWidth - bubbleWidth / 2 - margin;
+  if (shouldFlip !== bubbleFlip) {
+    bubbleFlip = shouldFlip;
+    bubble.classList.toggle('flip', bubbleFlip);
+    bubble.style.left = bubbleFlip ? 'auto' : '50%';
+    bubble.style.right = bubbleFlip ? '8px' : 'auto';
+    bubble.style.transform = bubbleFlip ? 'translateY(8px) scale(0.88)' : 'translateX(-50%) translateY(8px) scale(0.88)';
+  }
+}
+
+function sizeBubbleToText() {
+  const textWidth = Math.ceil(bubbleOs.scrollWidth);
+  bubble.style.width = `${Math.max(120, Math.min(300, textWidth + 44))}px`;
+}
+
+function render() {
+  const pos = clampPosition(baseX + autoOffsetX, baseY);
+  wrap.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
+  placeBubble();
+}
+
+function placeInitial() {
+  cancelDropAnimation();
+  wrap.style.transition = 'none';
+  const bounds = getBounds();
+  baseX = Math.max(0, (stage.clientWidth - bounds.width) / 2);
+  baseY = Math.max(0, stage.clientHeight - bounds.height - 30);
+  autoOffsetX = 0;
+  render();
+  requestAnimationFrame(() => { wrap.style.transition = ''; });
+}
+
+function triggerSquash() {
+  svg.classList.remove('squash');
+  void svg.offsetWidth;
+  svg.classList.add('squash');
+}
+
+function finishDrop() {
+  dropRafId = 0; dropping = false;
+  wrap.classList.remove('dropping');
+  triggerSquash();
+  squashTimeoutId = setTimeout(() => { svg.classList.remove('squash'); squashTimeoutId = null; render(); }, 310);
+  render();
+}
+
+function cancelDropAnimation() {
+  if (dropRafId) { cancelAnimationFrame(dropRafId); dropRafId = 0; }
+  dropping = false; wrap.classList.remove('dropping');
+  if (squashTimeoutId) { clearTimeout(squashTimeoutId); squashTimeoutId = null; }
+  svg.classList.remove('squash');
+}
+
+function runDropFrame(timestamp) {
+  if (!dropping) { dropRafId = 0; return; }
+  if (!lastDropTime) lastDropTime = timestamp;
+  const delta = Math.min(0.032, (timestamp - lastDropTime) / 1000);
+  lastDropTime = timestamp;
+  dropVelocityY += DROP_GRAVITY * delta;
+  baseY += dropVelocityY * delta;
+  if (baseY >= dropGroundY) {
+    baseY = dropGroundY; triggerSquash();
+    if (dropBounceCount === 0) {
+      const nb = Math.abs(dropVelocityY) * DROP_BOUNCE_FACTOR;
+      if (nb > DROP_MIN_BOUNCE_SPEED) { dropBounceCount = 1; dropVelocityY = -nb; }
+      else { finishDrop(); return; }
+    } else { finishDrop(); return; }
+  }
+  render();
+  dropRafId = requestAnimationFrame(runDropFrame);
+}
+
+function startDrop() {
+  cancelDropAnimation();
+  dropBounceCount = 0; dropVelocityY = 0; lastDropTime = 0;
+  dropGroundY = clampPosition(baseX, getBounds().maxY).y;
+  if (baseY >= dropGroundY) {
+    // Already on ground, no drop needed, no squash
+    baseY = dropGroundY;
+    render();
+    return;
+  }
+  dropping = true; wrap.classList.add('dropping');
+  render(); dropRafId = requestAnimationFrame(runDropFrame);
+}
+
+function startDrag(clientX, clientY) {
+  cancelDropAnimation();
+  const cx = clampPosition(baseX + autoOffsetX, baseY).x;
+  const cy = clampPosition(baseX + autoOffsetX, baseY).y;
+  dragging = true; autoOffsetX = 0; baseX = cx; baseY = cy;
+  dragOffsetX = clientX - cx; dragOffsetY = clientY - cy;
+  wrap.classList.add('dragging'); render();
+  playRandomAnim();
+}
+
+function stopDrag() {
+  if (!dragging) return;
+  dragging = false; wrap.classList.remove('dragging'); startDrop();
+}
+
+function clearLongPress() { if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; } }
+
+function handlePointerDown(e) {
+  tapDownX = e.clientX; tapDownY = e.clientY; tapDownTime = Date.now();
+  if (e.pointerType === 'touch') {
+    clearLongPress(); touchStartX = e.clientX; touchStartY = e.clientY;
+    longPressTimer = setTimeout(() => startDrag(e.clientX, e.clientY), 180);
+    return;
+  }
+  e.preventDefault(); startDrag(e.clientX, e.clientY);
+}
+
+function handlePointerMove(e) {
+  if (e.pointerType === 'touch' && !dragging && longPressTimer) {
+    if (Math.abs(e.clientX - touchStartX) > 8 || Math.abs(e.clientY - touchStartY) > 8) clearLongPress();
+  }
+  if (!dragging) return;
+  e.preventDefault();
+  const next = clampPosition(e.clientX - dragOffsetX, e.clientY - dragOffsetY);
+  baseX = next.x; baseY = next.y; render();
+}
+
+function handlePointerUp(e) {
+  const dx = Math.abs((e ? e.clientX : tapDownX) - tapDownX);
+  const dy = Math.abs((e ? e.clientY : tapDownY) - tapDownY);
+  const isTap = dx < 8 && dy < 8 && Date.now() - tapDownTime < 300;
+  clearLongPress(); stopDrag();
+  if (isTap) onTap();
+}
+
+function onTap() { playRandomAnim(); showBubble(); }
+
+wrap.addEventListener('pointerdown', handlePointerDown);
+window.addEventListener('pointermove', handlePointerMove, { passive: false });
+window.addEventListener('pointerup', handlePointerUp);
+window.addEventListener('pointercancel', handlePointerUp);
+window.addEventListener('resize', placeInitial);
+
+function animateWalk() {
+  if (!dragging && !dropping) {
+    walkPhase += walkSpeed;
+    autoOffsetX = Math.sin(walkPhase) * walkAmplitude + Math.sin(walkPhase * 0.33) * 12;
+    render();
+  }
+  requestAnimationFrame(animateWalk);
+}
+
+function rotateOs() {
+  osIndex = (osIndex + 1) % osPool.length;
+  bubbleOs.textContent = osPool[osIndex];
+  sizeBubbleToText();
+}
+
+function showBubble(text, isAi) {
+  if (text) { bubbleOs.textContent = text; sizeBubbleToText(); }
+  else { rotateOs(); }
+  bubble.classList.remove('show', 'ai-reply');
+  void bubble.offsetWidth;
+  bubble.classList.add(isAi ? 'ai-reply' : 'show');
+}
+
+function queueBubble(delay) {
+  clearTimeout(bubbleTimeoutId);
+  bubbleTimeoutId = setTimeout(() => { showBubble(); queueBubble(20000); }, delay);
+}
+
+// ===== CLOCK =====
+let clockInitialized = false;
+function updateClock() {
+  const now = new Date();
+  const value = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  if (!clockInitialized) {
+    clockText.innerHTML = '';
+    for (const char of value) {
+      const digit = document.createElement('div');
+      digit.className = char === ':' ? 'clock-colon' : 'clock-digit';
+      for (const row of DIGITS[char]) {
+        for (const cell of row) {
+          const span = document.createElement('span');
+          if (cell === '1') span.className = 'on';
+          digit.appendChild(span);
+        }
+      }
+      clockText.appendChild(digit);
+    }
+    clockInitialized = true; return;
+  }
+  let ci = 0;
+  for (const char of value) {
+    const digitEl = clockText.children[ci++];
+    const spans = digitEl.children;
+    let si = 0;
+    for (const row of DIGITS[char]) {
+      for (const cell of row) {
+        const wantOn = cell === '1';
+        if (wantOn !== (spans[si].className === 'on')) spans[si].className = wantOn ? 'on' : '';
+        si++;
+      }
+    }
+  }
+}
+
+// ===== VOICE =====
+let isRecording = false, recognition = null, conversationHistory = [];
+
+function initSpeechRecognition() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { micBtn.title = '浏览器不支持语音识别'; micBtn.style.opacity = '0.5'; return null; }
+  const rec = new SR();
+  rec.lang = 'zh-CN'; rec.continuous = false; rec.interimResults = false;
+  rec.onresult = (e) => { setMicStatus(''); sendToDeepSeek(e.results[0][0].transcript); };
+  rec.onerror = (e) => {
+    stopRecording();
+    const msg = e.error === 'no-speech' ? '没听到声音，再试试' : e.error === 'not-allowed' ? '请允许麦克风权限' : '识别出错了';
+    setMicStatus(msg); setTimeout(() => setMicStatus(''), 3000);
+  };
+  rec.onend = () => { if (isRecording) stopRecording(); };
+  return rec;
+}
+
+function startRecording() {
+  if (!recognition) recognition = initSpeechRecognition();
+  if (!recognition) return;
+  isRecording = true; micBtn.classList.add('recording'); setMicStatus('正在听你说...');
+  try { recognition.start(); } catch(e) { stopRecording(); }
+}
+
+function stopRecording() {
+  isRecording = false; micBtn.classList.remove('recording');
+  if (recognition) try { recognition.stop(); } catch(e) {}
+}
+
+function setMicStatus(text) {
+  micStatus.textContent = text;
+  micStatus.classList.toggle('visible', !!text);
+}
+
+async function sendToDeepSeek(userMessage) {
+  micBtn.classList.add('processing');
+  setMicStatus('小帕正在思考...');
+  showBubble('......', false);
+  conversationHistory.push({ role: 'user', content: userMessage });
+  if (conversationHistory.length > 20) conversationHistory = conversationHistory.slice(-16);
+
+  const messages = [
+    { role: 'system', content: '你是帕恰狗（Pochacco），三丽鸥的角色，一只活泼可爱的白色小狗，喜欢运动和冒险。回复简短可爱（不超过30字），用轻松活泼的语气，偶尔加"汪"。用中文回复。' },
+    ...conversationHistory
+  ];
+
+  try {
+    const res = await fetch(DEEPSEEK_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${DEEPSEEK_API_KEY}` },
+      body: JSON.stringify({ model: 'deepseek-chat', messages, max_tokens: 100, temperature: 0.8 })
+    });
+    if (!res.ok) throw new Error(`API error: ${res.status}`);
+    const data = await res.json();
+    const reply = data.choices[0].message.content.trim();
+    conversationHistory.push({ role: 'assistant', content: reply });
+    showBubble(reply, true);
+    setMicStatus('');
+  } catch (err) {
+    showBubble('汪...连接不上了...', false);
+    setMicStatus('网络错误，请检查 API Key');
+    setTimeout(() => setMicStatus(''), 4000);
+  } finally { micBtn.classList.remove('processing'); }
+}
+
+micBtn.addEventListener('click', () => {
+  if (micBtn.classList.contains('processing')) return;
+  if (isRecording) stopRecording(); else startRecording();
+});
+
+// ===== EMOJI =====
+const emojiPool = ['🐾','⭐','🎵','🎶','💙','🦴','🌟','♪','💫','🐕','🏃','⚽'];
+const panicPool = ['❓','‼️','😱','⚠️','❗','🫨','💦','😰'];
+
+function spawnNote() {
+  const isPanic = dragging;
+  const pool = isPanic ? panicPool : emojiPool;
+  const el = document.createElement('span');
+  el.className = 'note';
+  el.textContent = pool[Math.floor(Math.random() * pool.length)];
+  const rect = wrap.getBoundingClientRect();
+  el.style.left = (rect.left + rect.width/2 + (Math.random()-0.5)*rect.width*0.9) + 'px';
+  el.style.top  = (rect.top + rect.height*0.25 + (Math.random()-0.5)*rect.height*0.4) + 'px';
+  const dur = isPanic ? (1.4+Math.random()*1.2) : (3.2+Math.random()*2.8);
+  el.style.animationDuration = dur + 's';
+  el.style.fontSize = (24+Math.random()*24) + 'px';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), (dur+0.1)*1000);
+  setTimeout(spawnNote, isPanic ? (300+Math.random()*500) : (1200+Math.random()*1600));
+}
+
+// ===== INIT =====
+svg.addEventListener('dragstart', e => e.preventDefault());
+updateClock();
+setInterval(updateClock, 60000);
+placeInitial();
+animateWalk();
+sizeBubbleToText();
+showBubble();
+setTimeout(showBubble, 7000);
+queueBubble(27000);
+spawnNote();
+</script>
+</body>
+</html>
