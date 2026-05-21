@@ -1,0 +1,15 @@
+{
+  "name": "小帕时钟",
+  "short_name": "小帕",
+  "icons": [
+    {
+      "src": "/pochacco-clock/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ],
+  "start_url": "/pochacco-clock/apps/clawd-clock/index.html",
+  "display": "standalone",
+  "background_color": "#E8F4FD",
+  "theme_color": "#E8F4FD"
+}
