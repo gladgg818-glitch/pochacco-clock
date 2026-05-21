@@ -649,26 +649,12 @@ const DIGITS = {
 };
 
 // ===== DIALOGUE =====
-// 高权重台词（出现概率大）
-const osHigh = [
+const osPool = [
   '我是小帕，我是小帕！',
   '闻一下，闻一下～',
   '我一年没洗澡了，臭死你',
   '小帕没穿裤子',
 ];
-// 低权重台词（基于背景资料）
-const osLow = [
-  '好想吃香蕉冰淇淋...',
-  '今天散步绕了好远的路～',
-  '诶？我又迷路了...',
-  'Piyo、Pico、Peebo在哪呀',
-  '毛茸茸小镇今天好暖和～',
-  '汪！要不要一起运动？',
-  'Choccie今天有空吗～',
-  '莲华草开了好多好多！',
-];
-// 加权池：高权重出现3次，低权重出现1次
-const osPool = [...osHigh, ...osHigh, ...osHigh, ...osLow];
 
 // ===== PHYSICS =====
 let baseX = 0, baseY = 0, autoOffsetX = 0;
@@ -863,17 +849,32 @@ function rotateOs() {
   sizeBubbleToText();
 }
 
+let aiReplying = false;
+
 function showBubble(text, isAi) {
+  if (isAi) {
+    aiReplying = true;
+    clearTimeout(bubbleTimeoutId);
+  }
   if (text) { bubbleOs.textContent = text; sizeBubbleToText(); }
   else { rotateOs(); }
   bubble.classList.remove('show', 'ai-reply');
   void bubble.offsetWidth;
   bubble.classList.add(isAi ? 'ai-reply' : 'show');
+
+  if (isAi) {
+    setTimeout(() => { aiReplying = false; queueBubble(15000); }, 8000);
+  }
 }
 
 function queueBubble(delay) {
   clearTimeout(bubbleTimeoutId);
-  bubbleTimeoutId = setTimeout(() => { showBubble(); queueBubble(20000); }, delay);
+  bubbleTimeoutId = setTimeout(() => {
+    if (!aiReplying) {
+      showBubble();
+    }
+    queueBubble(20000);
+  }, delay);
 }
 
 // ===== CLOCK =====
