@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>像素编辑器 - 帕恰狗</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #f5f5f5;
+  font-family: -apple-system, sans-serif;
+  padding: 20px;
+  display: flex;
+  gap: 24px;
+  min-height: 100vh;
+}
+
+.panel {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+
+#editor-panel {
+  flex: 0 0 auto;
+}
+
+#tools-panel {
+  flex: 1;
+  max-width: 320px;
+}
+
+h2 {
+  font-size: 16px;
+  margin-bottom: 12px;
+  color: #333;
+}
+
+#grid-container {
+  display: inline-block;
+  border: 1px solid #ddd;
+  background: #fff;
+  cursor: crosshair;
+  image-rendering: pixelated;
+  position: relative;
+}
+
+#grid-container.has-ref {
+  background: transparent;
+}
+
+#grid-container canvas {
+  display: block;
+  position: relative;
+  z-index: 2;
+}
+
+#ref-image {
+  position: absolute;
+  opacity: 0.3;
+  z-index: 1;
+  pointer-events: none;
+  image-rendering: pixelated;
+  transform-origin: top left;
+}
+
+#ref-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+#ref-controls label {
+  font-size: 12px;
+  color: #666;
+}
+
+#ref-controls input[type="range"] {
+  width: 100px;
+}
+
+#ref-controls input[type="file"] {
+  font-size: 12px;
+}
+
+.color-palette {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.color-swatch {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 3px solid #ddd;
+  transition: border-color 0.15s;
+  position: relative;
+}
+
+.color-swatch.active {
+  border-color: #333;
+  box-shadow: 0 0 0 2px #666;
+}
+
+.color-swatch.transparent-swatch {
+  background: repeating-conic-gradient(#ddd 0% 25%, #fff 0% 50%) 50% / 12px 12px;
+}
+
+.tools-section {
+  margin-bottom: 20px;
+}
+
+.tools-section label {
+  display: block;
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 6px;
+}
+
+button {
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 13px;
+  margin-right: 8px;
+  margin-bottom: 8px;
+  transition: all 0.15s;
+}
+
+button:hover {
+  background: #f0f0f0;
+  border-color: #bbb;
+}
+
+button.primary {
+  background: #4A90D9;
+  color: #fff;
+  border-color: #4A90D9;
+}
+
+button.primary:hover {
+  background: #357ABD;
+}
+
+button.danger {
+  background: #E85D5D;
+  color: #fff;
+  border-color: #E85D5D;
+}
+
+#output {
+  width: 100%;
+  height: 200px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  resize: vertical;
+  white-space: pre;
+  overflow: auto;
+}
+
+#preview-container {
+  margin-top: 16px;
+  text-align: center;
+}
+
+#preview-canvas {
+  image-rendering: pixelated;
+  border: 1px solid #eee;
+  background: #E8F4FD;
+}
+
+.size-inputs {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.size-inputs input {
+  width: 60px;
+  padding: 4px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.size-inputs span {
+  font-size: 13px;
+  color: #666;
+}
+
+.hint {
+  font-size: 12px;
+  color: #999;
+  margin-top: 8px;
+  line-height: 1.6;
+}
+
+#layer-select {
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 13px;
+  margin-bottom: 12px;
+  width: 100%;
+}
+</style>
+</head>
+<body>
+
+<div class="panel" id="editor-panel">
+  <h2>像素画布 <span id="coord-display" style="font-weight:normal;color:#999;font-size:12px;"></span></h2>
+  <div id="grid-container">
+    <img id="ref-image" style="display:none;">
+    <canvas id="grid-canvas"></canvas>
+  </div>
+  <div id="ref-controls">
+    <input type="file" id="ref-file" accept="image/*">
+    <label>透明度: <input type="range" id="ref-opacity" min="0" max="100" value="40"></label>
+    <label>缩放: <input type="range" id="ref-scale" min="10" max="300" value="100">
+      <span id="ref-scale-val">100%</span>
+    </label>
+    <label>X: <input type="range" id="ref-x" min="-200" max="200" value="0">
+    </label>
+    <label>Y: <input type="range" id="ref-y" min="-200" max="200" value="0">
+    </label>
+  </div>
+  <p class="hint">
+    1. 上传参考图 → 调缩放让图的格子和画布格子对齐<br>
+    2. 用 X/Y 滑块移动图片位置<br>
+    3. 左键画 · 右键擦 · 拖动连续画<br>
+    Ctrl+Z 撤销
+  </p>
+</div>
+
+<div class="panel" id="tools-panel">
+  <div class="tools-section">
+    <h2>画布大小</h2>
+    <div class="size-inputs">
+      <input type="number" id="grid-w" value="32" min="8" max="48">
+      <span>×</span>
+      <input type="number" id="grid-h" value="36" min="8" max="48">
+      <button onclick="resizeGrid()">调整</button>
+    </div>
+  </div>
+
+  <div class="tools-section">
+    <h2>图层</h2>
+    <select id="layer-select">
+      <option value="all">全部（合并画）</option>
+      <option value="ear-left">左耳</option>
+      <option value="ear-right">右耳</option>
+      <option value="body">身体+头</option>
+      <option value="cheeks">腮红</option>
+      <option value="bow">蝴蝶结</option>
+      <option value="feet">脚</option>
+      <option value="tail">尾巴</option>
+    </select>
+    <p class="hint">分图层画可以让各部分独立做动画。<br>如果不需要分层动画，选"全部"就行。</p>
+  </div>
+
+  <div class="tools-section">
+    <h2>调色板</h2>
+    <div class="color-palette" id="palette"></div>
+  </div>
+
+  <div class="tools-section">
+    <h2>工具</h2>
+    <button onclick="fillBucket()">🪣 油漆桶</button>
+    <button onclick="undo()">↩ 撤销</button>
+    <button class="danger" onclick="clearGrid()">清空画布</button>
+  </div>
+
+  <div class="tools-section">
+    <h2>预览</h2>
+    <div id="preview-container">
+      <canvas id="preview-canvas" width="192" height="240"></canvas>
+    </div>
+  </div>
+
+  <div class="tools-section">
+    <h2>导出</h2>
+    <button class="primary" onclick="exportData()">📋 导出数据（复制给我）</button>
+    <textarea id="output" placeholder="点击导出后数据会出现在这里，复制发给我即可"></textarea>
+  </div>
+</div>
+
+<script>
+const COLORS = [
+  { id: 'transparent', label: '透明', color: null, css: 'transparent-swatch' },
+  { id: 'black', label: '黑', color: '#1a1a1a', hex: '#1a1a1a' },
+  { id: 'white', label: '白', color: '#ffffff', hex: '#ffffff' },
+  { id: 'pink', label: '粉', color: '#FFB5C5', hex: '#FFB5C5' },
+  { id: 'blue', label: '蓝', color: '#7B8EC8', hex: '#7B8EC8' },
+  { id: 'darkblue', label: '深蓝', color: '#5B6BA8', hex: '#5B6BA8' },
+];
+
+let gridW = 32, gridH = 36;
+let grid = []; // grid[y][x] = color id or null
+let currentColor = 'black';
+let history = [];
+let isDrawing = false;
+const CELL = 18; // display cell size
+
+const canvas = document.getElementById('grid-canvas');
+const ctx = canvas.getContext('2d');
+const previewCanvas = document.getElementById('preview-canvas');
+const previewCtx = previewCanvas.getContext('2d');
+
+function initGrid() {
+  grid = Array.from({ length: gridH }, () => Array(gridW).fill(null));
+  canvas.width = gridW * CELL;
+  canvas.height = gridH * CELL;
+  history = [];
+  draw();
+  drawPreview();
+}
+
+function resizeGrid() {
+  const newW = parseInt(document.getElementById('grid-w').value) || 24;
+  const newH = parseInt(document.getElementById('grid-h').value) || 30;
+  const oldGrid = grid;
+  gridW = Math.min(48, Math.max(8, newW));
+  gridH = Math.min(48, Math.max(8, newH));
+  grid = Array.from({ length: gridH }, (_, y) =>
+    Array.from({ length: gridW }, (_, x) =>
+      (oldGrid[y] && oldGrid[y][x]) ? oldGrid[y][x] : null
+    )
+  );
+  canvas.width = gridW * CELL;
+  canvas.height = gridH * CELL;
+  draw();
+  drawPreview();
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Draw cells - only filled pixels, leave empty ones transparent so ref image shows through
+  for (let y = 0; y < gridH; y++) {
+    for (let x = 0; x < gridW; x++) {
+      const colorId = grid[y][x];
+      if (colorId) {
+        const c = COLORS.find(c => c.id === colorId);
+        if (c && c.color) {
+          ctx.fillStyle = c.color;
+          ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
+        }
+      }
+    }
+  }
+
+  // Grid lines
+  ctx.strokeStyle = 'rgba(255,0,0,0.35)';
+  ctx.lineWidth = 0.5;
+  for (let x = 0; x <= gridW; x++) {
+    ctx.beginPath();
+    ctx.moveTo(x * CELL, 0);
+    ctx.lineTo(x * CELL, gridH * CELL);
+    ctx.stroke();
+  }
+  for (let y = 0; y <= gridH; y++) {
+    ctx.beginPath();
+    ctx.moveTo(0, y * CELL);
+    ctx.lineTo(gridW * CELL, y * CELL);
+    ctx.stroke();
+  }
+}
+
+function drawPreview() {
+  const scale = 8;
+  previewCanvas.width = gridW * scale;
+  previewCanvas.height = gridH * scale;
+  previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+  previewCtx.fillStyle = '#E8F4FD';
+  previewCtx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
+
+  for (let y = 0; y < gridH; y++) {
+    for (let x = 0; x < gridW; x++) {
+      const colorId = grid[y][x];
+      if (colorId) {
+        const c = COLORS.find(c => c.id === colorId);
+        if (c && c.color) {
+          previewCtx.fillStyle = c.color;
+          previewCtx.fillRect(x * scale, y * scale, scale, scale);
+        }
+      }
+    }
+  }
+}
+
+function saveHistory() {
+  history.push(grid.map(row => [...row]));
+  if (history.length > 50) history.shift();
+}
+
+function undo() {
+  if (history.length === 0) return;
+  grid = history.pop();
+  draw();
+  drawPreview();
+}
+
+function setPixel(x, y, colorId) {
+  if (x < 0 || x >= gridW || y < 0 || y >= gridH) return;
+  grid[y][x] = colorId === 'transparent' ? null : colorId;
+  draw();
+  drawPreview();
+}
+
+function getGridPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  const x = Math.floor((e.clientX - rect.left) / CELL);
+  const y = Math.floor((e.clientY - rect.top) / CELL);
+  return { x, y };
+}
+
+canvas.addEventListener('mousedown', (e) => {
+  e.preventDefault();
+  const { x, y } = getGridPos(e);
+  saveHistory();
+  isDrawing = true;
+  if (e.button === 2) {
+    setPixel(x, y, null);
+  } else {
+    setPixel(x, y, currentColor);
+  }
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  const { x, y } = getGridPos(e);
+  document.getElementById('coord-display').textContent = `(${x}, ${y})`;
+  if (!isDrawing) return;
+  if (e.buttons === 2) {
+    setPixel(x, y, null);
+  } else {
+    setPixel(x, y, currentColor);
+  }
+});
+
+canvas.addEventListener('mouseup', () => { isDrawing = false; });
+canvas.addEventListener('mouseleave', () => { isDrawing = false; });
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+    e.preventDefault();
+    undo();
+  }
+});
+
+function clearGrid() {
+  if (!confirm('确定清空画布？')) return;
+  saveHistory();
+  grid = Array.from({ length: gridH }, () => Array(gridW).fill(null));
+  draw();
+  drawPreview();
+}
+
+function fillBucket() {
+  // Fill all transparent with current color (simple version)
+  saveHistory();
+  alert('点击画布上的一个区域来填充（开发中，暂时请手动画）');
+}
+
+// Palette
+function buildPalette() {
+  const palette = document.getElementById('palette');
+  palette.innerHTML = '';
+  COLORS.forEach(c => {
+    const div = document.createElement('div');
+    div.className = 'color-swatch' + (c.css ? ' ' + c.css : '') + (c.id === currentColor ? ' active' : '');
+    if (c.color) div.style.background = c.color;
+    div.title = c.label;
+    div.addEventListener('click', () => {
+      currentColor = c.id;
+      document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+      div.classList.add('active');
+    });
+    palette.appendChild(div);
+  });
+}
+
+function exportData() {
+  const charMap = { 'black': '#', 'white': 'W', 'pink': 'P', 'blue': 'B', 'darkblue': 'b' };
+  let lines = [];
+  for (let y = 0; y < gridH; y++) {
+    let row = '';
+    for (let x = 0; x < gridW; x++) {
+      const colorId = grid[y][x];
+      row += colorId ? (charMap[colorId] || '?') : '.';
+    }
+    lines.push(`'${row}'`);
+  }
+
+  const output = `// 帕恰狗像素数据 (${gridW}x${gridH})\n// # = 黑, W = 白, P = 粉, B = 蓝, b = 深蓝, . = 透明\nconst pochaccoGrid = [\n  ${lines.join(',\n  ')}\n];`;
+
+  document.getElementById('output').value = output;
+  navigator.clipboard.writeText(output).then(() => {
+    alert('已复制到剪贴板！发给我即可');
+  }).catch(() => {
+    document.getElementById('output').select();
+    alert('请手动复制文本框中的内容发给我');
+  });
+}
+
+// Reference image
+const refImage = document.getElementById('ref-image');
+const refFile = document.getElementById('ref-file');
+const refOpacity = document.getElementById('ref-opacity');
+const refScale = document.getElementById('ref-scale');
+const refScaleVal = document.getElementById('ref-scale-val');
+const refX = document.getElementById('ref-x');
+const refY = document.getElementById('ref-y');
+
+function updateRefTransform() {
+  const scale = refScale.value / 100;
+  const x = parseInt(refX.value);
+  const y = parseInt(refY.value);
+  refImage.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
+  refScaleVal.textContent = refScale.value + '%';
+}
+
+refFile.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const url = URL.createObjectURL(file);
+  refImage.src = url;
+  refImage.style.display = 'block';
+  refImage.style.opacity = refOpacity.value / 100;
+  document.getElementById('grid-container').classList.add('has-ref');
+  updateRefTransform();
+});
+
+refOpacity.addEventListener('input', () => {
+  refImage.style.opacity = refOpacity.value / 100;
+});
+
+refScale.addEventListener('input', updateRefTransform);
+refX.addEventListener('input', updateRefTransform);
+refY.addEventListener('input', updateRefTransform);
+
+// Init
+buildPalette();
+initGrid();
+</script>
+</body>
+</html>
