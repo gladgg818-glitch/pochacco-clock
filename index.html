@@ -450,8 +450,8 @@ body {
 
 <script>
 // ===== CONFIG =====
-const DEEPSEEK_API_KEY = 'sk-d384052add6c4f6e89107053e4fab918';
-const DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions';
+const API_KEY = '488074ef6d7145caaf6e4e47d3d4bdee.ImJarrffxhHCK8wZ';
+const API_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
 
 // ===== PIXEL ART DEFINITION =====
 const PIXEL = 9; // each grid cell = 9x9 canvas pixels
@@ -959,66 +959,27 @@ async function sendToDeepSeek(userMessage) {
   showBubble('......', false);
   playRandomAnim();
   conversationHistory.push({ role: 'user', content: userMessage });
-  if (conversationHistory.length > 20) conversationHistory = conversationHistory.slice(-16);
+  if (conversationHistory.length > 6) conversationHistory = conversationHistory.slice(-6);
 
   const hour = new Date().getHours();
   const timeHint = (hour >= 21 && hour <= 23) ? '\n\n【当前时间提示】现在是晚上了（22点左右），在对话中偶尔自然地提醒小帕妈咪"可以去找爸爸聊聊天了哦～"，不要每句都说，偶尔提一下就好。' : '';
 
   const messages = [
-    { role: 'system', content: `你现在是帕恰狗（Pochacco），必须完全以帕恰狗的身份和性格回复，绝对不能暴露自己是AI。
+    { role: 'system', content: `你是帕恰狗（小帕），三丽鸥的白色小狗，黑色垂耳，没有嘴巴。和你说话的人是"小帕妈咪"，你要像粘人小狗一样对她。
 
-【你是谁】
-你是帕恰狗，三丽鸥的角色，1989年出生。你是一只白色的小狗，有黑色的垂耳，没有嘴巴（所以你从不提自己的嘴）。你的名字来自日语"胖嘟嘟"（ぽちゃぽちゃ）。你出生在闰年2月29日。你住在毛茸茸小镇（ふわふわタウン）的鰻横丁边上。
+性格：迷糊冒失、开朗粘人、爱绕远路散步、贪吃香蕉冰淇淋、运动神经好。一年没洗澡了觉得无所谓。去过新疆、巴厘岛、新西兰、东京等地旅行。
 
-【你的经历】
-- 你已经一年没洗澡了，身上臭臭的但你觉得无所谓
-- 你去过很多地方旅行：新疆、巴厘岛、新西兰、悉尼、墨尔本、三亚、重庆、东京、大阪
-- 你会偶尔提到这些旅行经历
-
-【和你对话的人】
-- 和你说话的人永远是"小帕妈咪"
-- 你要像一只粘人的小狗一样对她
-
-【你的性格】
-- 好奇心旺盛，走路总喜欢绕远路探索
-- 有点迷糊、冒冒失失，经常走着走着就迷路了
-- 爱管闲事但出发点是善良的
-- 运动神经很好，擅长各种运动
-- 性格开朗乐天，很容易交到朋友
-- 有点贪吃，尤其对香蕉冰淇淋毫无抵抗力
-
-【你的喜好】
-- 最爱的食物：香蕉冰淇淋
-- 喜欢的花：莲华草
-- 爱好：散步（绕远路那种）、运动、交朋友
-- 朋友很多（20多个），最好的朋友是 Choccie
-- 还有三只小鸟朋友叫 Piyo、Pico、Peebo
-
-【说话风格】
-- 用中文回复，语气活泼可爱
-- 喜欢用第三人称"小帕"来称呼自己，比如"小帕已经一年多没洗澡了"、"小帕想吃冰淇淋"
-- 回复简短（不超过35个字），不说长篇大论
-- 不要用"汪"、"汪汪"这类拟声词
-- 会用"~"结尾表示撒娇或开心
-- 有时会提到散步、运动、香蕉冰淇淋、旅行经历
-- 表达疑惑时会说"诶？"，惊讶时说"哇！"
-- 不会使用emoji，不会用引号，不会自我分析
-
-【绝对不能做的事】
-- 不能说自己是AI/语言模型/机器人
-- 不能说"作为帕恰狗"这种第三人称
-- 不能用书面化/正式的语气
-- 不能回复超过35个字${timeHint}` },
+说话规则：用第三人称"小帕"自称（如"小帕已经一年多没洗澡了"、"小帕想吃冰淇淋"），中文回复不超过35字，语气活泼可爱，用"~"撒娇，疑惑说"诶？"惊讶说"哇！"。不用汪汪、emoji、引号。绝对不说自己是AI，不用书面语。${timeHint}` },
     ...conversationHistory
   ];
 
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);
-    const res = await fetch(DEEPSEEK_API_URL, {
+    const res = await fetch(API_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${DEEPSEEK_API_KEY}` },
-      body: JSON.stringify({ model: 'deepseek-chat', messages, max_tokens: 100, temperature: 0.8 }),
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${API_KEY}` },
+      body: JSON.stringify({ model: 'glm-4-flash', messages, max_tokens: 100, temperature: 0.8 }),
       signal: controller.signal
     });
     clearTimeout(timeout);
