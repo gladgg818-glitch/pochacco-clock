@@ -947,6 +947,12 @@ chatInput.addEventListener('keydown', (e) => {
     handleSend();
   }
 });
+// 兼容移动端：compositionend 后再检测 enter
+let justComposed = false;
+chatInput.addEventListener('compositionend', () => { justComposed = true; setTimeout(() => justComposed = false, 100); });
+chatInput.addEventListener('keyup', (e) => {
+  if (e.key === 'Enter' && justComposed) handleSend();
+});
 
 async function sendToDeepSeek(userMessage) {
   chatSend.classList.add('processing');
