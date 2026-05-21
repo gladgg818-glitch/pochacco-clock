@@ -1013,22 +1013,22 @@ async function sendToDeepSeek(userMessage) {
   ];
 
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
     const res = await fetch(DEEPSEEK_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${DEEPSEEK_API_KEY}` },
-      body: JSON.stringify({ model: 'deepseek-chat', messages, max_tokens: 100, temperature: 0.8 })
+      body: JSON.stringify({ model: 'deepseek-chat', messages, max_tokens: 100, temperature: 0.8 }),
+      signal: controller.signal
     });
-    if (!res.ok) {
-      const errText = await res.text().catch(() => '');
-      console.error('API error:', res.status, errText);
-      throw new Error(`API error: ${res.status}`);
-    }
+    clearTimeout(timeout);
+    if (!res.ok) throw new Error(`API ${res.status}`);
     const data = await res.json();
     const reply = data.choices[0].message.content.trim();
     conversationHistory.push({ role: 'assistant', content: reply });
     showBubble(reply, true);
   } catch (err) {
-    console.error('sendToDeepSeek error:', err);
+    console.error('chat error:', err);
     showBubble('小帕断线了...再试一次吧', false);
   }
   chatSend.classList.remove('processing');
