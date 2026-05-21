@@ -643,23 +643,26 @@ const DIGITS = {
 };
 
 // ===== DIALOGUE =====
-const osPool = [
-  '汪！今天也要元气满满哦～',
-  '要不要一起去散步？',
-  '我最喜欢运动了！',
-  '蓝色贝雷帽是我的标志～',
-  '有点困了...但还想陪你玩！',
-  '试试长按拖拽我！',
-  '今天天气真好，适合出去玩～',
-  '饿了...想吃骨头饼干...',
-  '你知道吗？我跑步很快的！',
-  '要一起听音乐吗？',
-  '偷偷告诉你，我有点怕打雷...',
-  '尾巴摇摇～心情好好～',
-  '周末想去公园玩！',
-  '我可是很擅长接飞盘的哦！',
-  '今天也想做最棒的运动员！',
+// 高权重台词（出现概率大）
+const osHigh = [
+  '我是小帕，我是小帕！',
+  '闻一下，闻一下～',
+  '我一年没洗澡了，臭死你',
+  '小帕没穿裤子',
 ];
+// 低权重台词（基于背景资料）
+const osLow = [
+  '好想吃香蕉冰淇淋...',
+  '今天散步绕了好远的路～',
+  '诶？我又迷路了...',
+  'Piyo、Pico、Peebo在哪呀',
+  '毛茸茸小镇今天好暖和～',
+  '汪！要不要一起运动？',
+  'Choccie今天有空吗～',
+  '莲华草开了好多好多！',
+];
+// 加权池：高权重出现3次，低权重出现1次
+const osPool = [...osHigh, ...osHigh, ...osHigh, ...osLow];
 
 // ===== PHYSICS =====
 let baseX = 0, baseY = 0, autoOffsetX = 0;
@@ -849,7 +852,7 @@ function animateWalk() {
 }
 
 function rotateOs() {
-  osIndex = (osIndex + 1) % osPool.length;
+  osIndex = Math.floor(Math.random() * osPool.length);
   bubbleOs.textContent = osPool[osIndex];
   sizeBubbleToText();
 }
