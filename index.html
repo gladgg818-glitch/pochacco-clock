@@ -1018,14 +1018,20 @@ async function sendToDeepSeek(userMessage) {
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${DEEPSEEK_API_KEY}` },
       body: JSON.stringify({ model: 'deepseek-chat', messages, max_tokens: 100, temperature: 0.8 })
     });
-    if (!res.ok) throw new Error(`API error: ${res.status}`);
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      console.error('API error:', res.status, errText);
+      throw new Error(`API error: ${res.status}`);
+    }
     const data = await res.json();
     const reply = data.choices[0].message.content.trim();
     conversationHistory.push({ role: 'assistant', content: reply });
     showBubble(reply, true);
   } catch (err) {
-    showBubble('汪...连接不上了...', false);
-  } finally { chatSend.classList.remove('processing'); }
+    console.error('sendToDeepSeek error:', err);
+    showBubble('小帕断线了...再试一次吧', false);
+  }
+  chatSend.classList.remove('processing');
 }
 
 // ===== EMOJI =====
